@@ -8,7 +8,7 @@
 
 import UIKit
 
-class ViewController: UIViewController {
+class ViewController: UIViewController, UIGestureRecognizerDelegate {
 
     @IBOutlet weak var trayView: UIView!
     var trayOriginalCenter: CGPoint!
@@ -26,8 +26,13 @@ class ViewController: UIViewController {
         trayCenterWhenOpen = trayView.center
         trayCenterWhenClosed = CGPoint(x: trayView.center.x, y: trayView.center.y + trayClosedOffset)
         
-        let tapGestureRecognizer = UITapGestureRecognizer(target: self, action: "toggleTrayView")
+        let tapGestureRecognizer = UITapGestureRecognizer(target: self, action: "onTrayTap:")
         trayView.addGestureRecognizer(tapGestureRecognizer)
+    }
+    
+    // Enable simultaneous gesture recognizers
+    func gestureRecognizer(gestureRecognizer: UIGestureRecognizer, shouldRecognizeSimultaneouslyWithGestureRecognizer otherGestureRecognizer: UIGestureRecognizer) -> Bool {
+        return true
     }
 
     @IBAction func onTrayPanGesture(sender: UIPanGestureRecognizer) {
@@ -55,18 +60,18 @@ class ViewController: UIViewController {
     }
     
     func animateTrayOpening() {
-        UIView.animateWithDuration(0.5, delay: 0.0, usingSpringWithDamping: 0.5, initialSpringVelocity: 0, options: UIViewAnimationOptions.CurveEaseInOut,animations: { () -> Void in
+        UIView.animateWithDuration(0.5, delay: 0, usingSpringWithDamping: 0.5, initialSpringVelocity: 1, options: [], animations: { () -> Void in
             self.trayView.center = self.trayCenterWhenOpen
         }, completion: nil)
     }
     
     func animateTrayClosing() {
-        UIView.animateWithDuration(0.5, delay: 0.0, usingSpringWithDamping: 0.5, initialSpringVelocity: 0, options: UIViewAnimationOptions.CurveEaseInOut, animations: { () -> Void in
+        UIView.animateWithDuration(0.5, delay: 0, usingSpringWithDamping: 0.5, initialSpringVelocity: 0, options: [], animations: { () -> Void in
             self.trayView.center = self.trayCenterWhenClosed
         }, completion: nil)
     }
     
-    func toggleTrayView() {
+    func onTrayTap(sender: UITapGestureRecognizer) {
         if trayView.center == trayCenterWhenOpen {
             animateTrayClosing()
         } else {
@@ -81,11 +86,27 @@ class ViewController: UIViewController {
         if sender.state == UIGestureRecognizerState.Began {
             // Create a new image view with same image as the one currently panning
             newlyCreatedImage = UIImageView(image: imageView.image)
+            newlyCreatedImage.userInteractionEnabled = true
             
             // Add pan gesture recognizer
             let panGestureRecognizer = UIPanGestureRecognizer(target: self, action: "onImagePan:")
-            newlyCreatedImage.userInteractionEnabled = true
             newlyCreatedImage.addGestureRecognizer(panGestureRecognizer)
+            
+            // Add pinch gesture recognizer
+            let pinchGestureRecognizer = UIPinchGestureRecognizer(target: self, action: "onImagePinch:")
+            newlyCreatedImage.addGestureRecognizer(pinchGestureRecognizer)
+            pinchGestureRecognizer.delegate = self;
+
+            // Add rotate gesture recognizer
+            let rotateGestureRecognizer = UIRotationGestureRecognizer(target: self, action: "onImageRotate:")
+            newlyCreatedImage.addGestureRecognizer(rotateGestureRecognizer)
+            rotateGestureRecognizer.delegate = self;
+            
+            // Add doubletap gesture recognizer
+            let doubleTapGestureRecognizer = UITapGestureRecognizer(target: self, action: "onImageDoubleTap:")
+            doubleTapGestureRecognizer.numberOfTapsRequired = 2;
+            newlyCreatedImage.addGestureRecognizer(doubleTapGestureRecognizer)
+            doubleTapGestureRecognizer.delegate = self;
             
             // Add new image to the tray's parent view
             view.addSubview(newlyCreatedImage)
@@ -126,10 +147,33 @@ class ViewController: UIViewController {
         }
     }
     
+    func onImagePinch(sender: UIPinchGestureRecognizer) {
+        print("onImagePinch")
+        let imageView = sender.view as! UIImageView
+        // Get the scale value from the pinch gesture recognizer
+        let scale = sender.scale
+
+        imageView.transform = CGAffineTransformScale(imageView.transform, scale, scale)
+        sender.scale = 1
+    }
+    
+    func onImageRotate(sender: UIRotationGestureRecognizer) {
+        print("onImageRotate")
+        let imageView = sender.view as! UIImageView
+        let rotation = sender.rotation
+
+        imageView.transform = CGAffineTransformRotate(imageView.transform, rotation)
+        sender.rotation = 0
+    }
+
+    func onImageDoubleTap(sender: UITapGestureRecognizer) {
+        let imageView = sender.view as! UIImageView
+        imageView.removeFromSuperview()
+    }
+
     
     override func didReceiveMemoryWarning() {
         super.didReceiveMemoryWarning()
     }
 
 }
-
